@@ -15,6 +15,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -45,6 +46,11 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class Medicine_search extends AppCompatActivity {
 
@@ -209,13 +215,14 @@ public class Medicine_search extends AppCompatActivity {
                 if (msg.length() > 0) {
                     if (msg.length() > 2) {
                         try {
-                            final Handler handler = new Handler();
-                            handler.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    new JSON_search_medicine().execute();
-                                }
-                            }, 1000);
+                            medicine_search_api();
+//                            final Handler handler = new Handler();
+//                            handler.postDelayed(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    new JSON_search_medicine().execute();
+//                                }
+//                            }, 1000);
                         } catch (Exception e) {
                             new JSON_search_medicine().execute();
                         }
@@ -343,6 +350,108 @@ public class Medicine_search extends AppCompatActivity {
                 alertMessage_deleteall();
             }
         });
+    }
+
+    void medicine_search_api(){
+        String keyword = edt.getText().toString();
+        if (keyword.length() > 2) {
+
+            header_result_found.setText("Loading....");
+            loading_div.setVisibility(View.VISIBLE);
+            no_record_found_img.setVisibility(View.GONE);
+
+            ApiService apiService = RetrofitClient.getRetrofitInstance().create(ApiService.class);
+            Call<ResponseBody> call = apiService.medicine_search_api(
+                    "98c08565401579448aad7c64033dcb4081906dcb",
+                    keyword);
+
+            call.enqueue(new Callback<ResponseBody>() {
+                @Override
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                    if (response.isSuccessful()) {
+                        try {
+                            header_result_found.setText("Found result");
+                            loading_div.setVisibility(View.GONE);
+                            no_record_found_img.setVisibility(View.GONE);
+
+                            Search_medicine_List.clear();
+                            String res = response.body().string();
+                            if (!res.equals("")) {
+
+                                JSONArray jArray0 = new JSONArray(res);
+                                JSONObject jsonObject0 = jArray0.getJSONObject(0);
+                                String items = jsonObject0.getString("items");
+
+                                JSONArray jArray1 = new JSONArray(items);
+                                for (int i = 0; i < jArray1.length(); i++) {
+                                    JSONObject jsonObject = jArray1.getJSONObject(i);
+                                    String item_code = jsonObject.getString("item_code");
+                                    String item_image = jsonObject.getString("item_image");
+                                    String item_name = jsonObject.getString("item_name");
+                                    String item_packing = jsonObject.getString("item_packing");
+                                    String item_expiry = jsonObject.getString("item_expiry");
+                                    String item_company = jsonObject.getString("item_company");
+                                    String item_quantity = jsonObject.getString("item_quantity");
+                                    String item_stock = jsonObject.getString("item_stock");
+                                    String item_ptr = jsonObject.getString("item_ptr");
+                                    String item_mrp = jsonObject.getString("item_mrp");
+                                    String item_price = jsonObject.getString("item_price");
+                                    String item_scheme = jsonObject.getString("item_scheme");
+                                    String item_margin = jsonObject.getString("item_margin");
+                                    String item_featured = jsonObject.getString("item_featured");
+                                    String item_description1 = jsonObject.getString("item_description1");
+                                    String similar_items = jsonObject.getString("similar_items");
+
+                                    Medicine_search_get_or_set Search_medicine_set = new Medicine_search_get_or_set();
+                                    Search_medicine_set.item_code(item_code);
+                                    Search_medicine_set.item_image(item_image);
+                                    Search_medicine_set.item_name(item_name);
+                                    Search_medicine_set.item_packing(item_packing);
+                                    Search_medicine_set.item_expiry(item_expiry);
+                                    Search_medicine_set.item_company(item_company);
+                                    Search_medicine_set.item_quantity(item_quantity);
+                                    Search_medicine_set.item_stock(item_stock);
+                                    Search_medicine_set.item_ptr(item_ptr);
+                                    Search_medicine_set.item_mrp(item_mrp);
+                                    Search_medicine_set.item_price(item_price);
+                                    Search_medicine_set.item_scheme(item_scheme);
+                                    Search_medicine_set.item_margin(item_margin);
+                                    Search_medicine_set.item_featured(item_featured);
+
+                                    Search_medicine_set.item_description1(item_description1);
+                                    Search_medicine_set.similar_items(similar_items);
+                                    Search_medicine_List.add(Search_medicine_set);
+                                }
+                                adapter.notifyDataSetChanged();
+                                if(Search_medicine_List.isEmpty()) {
+                                    no_record_found_img.setVisibility(View.VISIBLE);
+                                    header_result_found.setText("No record found");
+                                }
+                            }
+                            else{
+                                no_record_found_img.setVisibility(View.VISIBLE);
+                                header_result_found.setText("No record found");
+                            }
+                        } catch (Exception e) {
+                            // TODO: handle exception
+                            Log.e("Bg-service", "Error parsing data" + e.toString());
+                            Toast.makeText(Medicine_search.this, "Error " + e.toString(), Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        // Handle error response
+                        Toast.makeText(Medicine_search.this, "Handle error response", Toast.LENGTH_LONG).show();
+
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+                    // Handle network failures or other errors
+                    Log.e("Bg-service", " " + t.toString());
+                    Toast.makeText(Medicine_search.this, "Error onFailure", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
     }
 
     private class JSON_search_medicine extends AsyncTask<Void, Void, Void> {
